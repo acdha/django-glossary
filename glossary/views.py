@@ -15,7 +15,11 @@ def term_list(request, **kwargs):
 
     ec = {"a_z": string.lowercase}
 
-    terms = Term.objects.all()
+    # NOTE: This does nothing until Django 1.2 arrives with support for
+    # reverse relationships in select_related(). In the meantime it'd be
+    # necessary to do something ugly like retrieve synonyms and restructure the
+    # data within Python. Caching is easier...
+    terms = Term.objects.select_related("synonyms")
 
     if "q" in request.GET:
         query = request.GET['q']
