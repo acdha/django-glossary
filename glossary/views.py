@@ -35,9 +35,9 @@ def term_list(request, **kwargs):
     used_letters = []
     for i in ec["a_z"]:
         try:
-            x = Term.objects.get(title__startswith=i)
+            x = Term.objects.get(title__istartswith=i)
             used_letters.append(i)
-        except:
+        except Term.DoesNotExist:
             pass
     
 
