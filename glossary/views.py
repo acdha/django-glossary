@@ -3,7 +3,7 @@ import string
 from django.db.models import Q
 
 from django.views.generic.list_detail import object_list
-from django.db import connection, transaction
+from django.db import connection
 
 from glossary.models import Term
 
@@ -37,13 +37,17 @@ def term_list(request, **kwargs):
     terms = terms.extra(select={"lower_title": "LOWER(%s.title)" % Term._meta.db_table }).order_by("lower_title")
     
     used_letters = []
-    for i in ec["a_z"]:
-        try:
-            x = Term.objects.get(title__istartswith=i)
-            used_letters.append(i)
-        except Term.DoesNotExist:
-            pass
     
+    # Optimized version for Postgres:
+    if connection.client.executable_name == "psql":
+        cursor = connection.cursor()
+        cursor.execute("""SELECT DISTINCT LOWER(SUBSTR(title, 1, 1)) AS initial FROM glossary_term ORDER BY initial""")
+        used_letters = [ i[0] for i in cursor.fetchall() ]
+    else:
+        for i in ec["a_z"]:
+            # NOTE: In Django 1.2 this could be .exists():
+            if Term.objects.filter(title__istartswith=i).count() > 0:
+                used_letters.append(i)
 
     return object_list(request, 
                         queryset=terms, 
